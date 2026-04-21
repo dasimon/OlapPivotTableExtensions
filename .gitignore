@@ -16,3 +16,6 @@ build_output.log
 # Local dev tooling config
 CLAUDE.md
 .vscode/
+
+# Inno Setup output
+installer/
