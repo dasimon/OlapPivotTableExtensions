@@ -9,11 +9,12 @@ using ExcelAdomdClient = ExcelAdomdClientReference::Microsoft.AnalysisServices.A
 
 namespace OlapPivotTableExtensions.AdomdClientWrappers
 {
-    public class AdomdConnection
+    public class AdomdConnection : IDisposable
     {
         private AdomdType _type;
         private AsAdomdClient.AdomdConnection _conn;
         private ExcelAdomdClient.AdomdConnection _connExcel;
+        private bool _disposed = false;
 
         public AdomdConnection(AsAdomdClient.AdomdConnection obj)
         {
@@ -191,6 +192,24 @@ namespace OlapPivotTableExtensions.AdomdClientWrappers
                     };
                     return f();
                 }
+            }
+        }
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _disposed = true;
+                try { _conn?.Dispose(); } catch (Exception ex) { Connect.Log.Warn(ex, "AdomdConnection.Dispose _conn"); }
+                try
+                {
+                    if (_connExcel != null)
+                    {
+                        ExcelAdoMdConnections.VoidDelegate f = delegate { _connExcel.Dispose(); };
+                        f();
+                    }
+                }
+                catch (Exception ex) { Connect.Log.Warn(ex, "AdomdConnection.Dispose _connExcel"); }
             }
         }
 

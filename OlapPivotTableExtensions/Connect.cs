@@ -13,6 +13,15 @@ namespace OlapPivotTableExtensions
 {
     public partial class Connect
     {
+        internal static readonly NLog.Logger Log = NLog.LogManager.GetCurrentClassLogger();
+
+        internal static void ShowError(string context, Exception ex, bool showDialog = true)
+        {
+            Log.Error(ex, context);
+            if (showDialog)
+                MessageBox.Show("Error: " + context + "\r\n" + ex.Message,
+                    "OLAP PivotTable Extensions", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
             try
@@ -157,13 +166,13 @@ namespace OlapPivotTableExtensions
         {
             try
             {
-                m_xlAppEvents.RemoveConnection();
+                m_xlAppEvents?.RemoveConnection();
                 m_xlAppEvents = null;
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(Application);
+                // Do NOT call Marshal.ReleaseComObject(Application) — VSTO manages the RCW lifetime
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Problem during close of OLAP PivotTable Extensions:\r\n" + ex.Message + "\r\n" + ex.StackTrace, "OLAP PivotTable Extensions");
+                System.Diagnostics.Trace.TraceError("OnBeginShutdown error: {0}", ex);
             }
         }
 
@@ -206,17 +215,15 @@ namespace OlapPivotTableExtensions
             {
                 if (_ShowCalcMembersByDefaultCached == null)
                 {
-                    Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH);
-                    _ShowCalcMembersByDefaultCached = ((int)regKey.GetValue(REGISTRY_PATH_SHOW_CALC_MEMBERS_BY_DEFAULT, 0) == 1) ? true : false;
-                    regKey.Close();
+                    using (var regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH))
+                        _ShowCalcMembersByDefaultCached = ((int)regKey.GetValue(REGISTRY_PATH_SHOW_CALC_MEMBERS_BY_DEFAULT, 0) == 1);
                 }
                 return (bool)_ShowCalcMembersByDefaultCached;
             }
             set
             {
-                Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH);
-                regKey.SetValue(REGISTRY_PATH_SHOW_CALC_MEMBERS_BY_DEFAULT, value, Microsoft.Win32.RegistryValueKind.DWord);
-                regKey.Close();
+                using (var regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH))
+                    regKey.SetValue(REGISTRY_PATH_SHOW_CALC_MEMBERS_BY_DEFAULT, value, Microsoft.Win32.RegistryValueKind.DWord);
                 _ShowCalcMembersByDefaultCached = value;
             }
         }
@@ -228,17 +235,15 @@ namespace OlapPivotTableExtensions
             {
                 if (_RefreshDataByDefaultCached == null)
                 {
-                    Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH);
-                    _RefreshDataByDefaultCached = ((int)regKey.GetValue(REGISTRY_PATH_REFRESH_DATA_BY_DEFAULT, 0) == 1) ? true : false;
-                    regKey.Close();
+                    using (var regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH))
+                        _RefreshDataByDefaultCached = ((int)regKey.GetValue(REGISTRY_PATH_REFRESH_DATA_BY_DEFAULT, 0) == 1);
                 }
                 return (bool)_RefreshDataByDefaultCached;
             }
             set
             {
-                Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH);
-                regKey.SetValue(REGISTRY_PATH_REFRESH_DATA_BY_DEFAULT, value, Microsoft.Win32.RegistryValueKind.DWord);
-                regKey.Close();
+                using (var regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH))
+                    regKey.SetValue(REGISTRY_PATH_REFRESH_DATA_BY_DEFAULT, value, Microsoft.Win32.RegistryValueKind.DWord);
                 _RefreshDataByDefaultCached = value;
             }
         }
@@ -250,17 +255,15 @@ namespace OlapPivotTableExtensions
             {
                 if (_FormatMdxCached == null)
                 {
-                    Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH);
-                    _FormatMdxCached = ((int)regKey.GetValue(REGISTRY_PATH_FORMAT_MDX, 0) == 1) ? true : false;
-                    regKey.Close();
+                    using (var regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH))
+                        _FormatMdxCached = ((int)regKey.GetValue(REGISTRY_PATH_FORMAT_MDX, 0) == 1);
                 }
                 return (bool)_FormatMdxCached;
             }
             set
             {
-                Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH);
-                regKey.SetValue(REGISTRY_PATH_FORMAT_MDX, value, Microsoft.Win32.RegistryValueKind.DWord);
-                regKey.Close();
+                using (var regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH))
+                    regKey.SetValue(REGISTRY_PATH_FORMAT_MDX, value, Microsoft.Win32.RegistryValueKind.DWord);
                 _FormatMdxCached = value;
             }
         }
@@ -272,17 +275,15 @@ namespace OlapPivotTableExtensions
             {
                 if (_SearchMeasuresOnlyDefault == null)
                 {
-                    Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH);
-                    _SearchMeasuresOnlyDefault = ((int)regKey.GetValue(REGISTRY_PATH_SEARCH_MEASURES_ONLY_DEFAULT, 0) == 1) ? true : false;
-                    regKey.Close();
+                    using (var regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH))
+                        _SearchMeasuresOnlyDefault = ((int)regKey.GetValue(REGISTRY_PATH_SEARCH_MEASURES_ONLY_DEFAULT, 0) == 1);
                 }
                 return (bool)_SearchMeasuresOnlyDefault;
             }
             set
             {
-                Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH);
-                regKey.SetValue(REGISTRY_PATH_SEARCH_MEASURES_ONLY_DEFAULT, value, Microsoft.Win32.RegistryValueKind.DWord);
-                regKey.Close();
+                using (var regKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(REGISTRY_BASE_PATH))
+                    regKey.SetValue(REGISTRY_PATH_SEARCH_MEASURES_ONLY_DEFAULT, value, Microsoft.Win32.RegistryValueKind.DWord);
                 _SearchMeasuresOnlyDefault = value;
             }
         }
@@ -304,7 +305,7 @@ namespace OlapPivotTableExtensions
                     this.m_xlAppEvents.ComRelease(wb);
 #endif
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
                 if (IsEmbedded) return;
 
@@ -330,7 +331,7 @@ namespace OlapPivotTableExtensions
                     //find the Filter sub-menu under the PivotTable context menu by ID 31404
                     popupFilter = (Office.CommandBarPopup)Application.CommandBars.FindControl(Office.MsoControlType.msoControlPopup, 31404, missing, missing);
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
                 if (popupFilter != null)
                     cmdFilterListMenuItem = (Office.CommandBarButton)popupFilter.Controls.Add(Office.MsoControlType.msoControlButton, System.Reflection.Missing.Value, System.Reflection.Missing.Value, System.Reflection.Missing.Value, true);
                 else
@@ -350,7 +351,7 @@ namespace OlapPivotTableExtensions
                     //find the Show/Hide Fields sub-menu under the PivotTable context menu by ID 31406
                     popupShowHideFields = (Office.CommandBarPopup)Application.CommandBars.FindControl(Office.MsoControlType.msoControlPopup, 31406, missing, missing);
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
                 if (popupShowHideFields != null)
                     cmdChooseFieldsMenuItem = (Office.CommandBarButton)popupShowHideFields.Controls.Add(Office.MsoControlType.msoControlButton, System.Reflection.Missing.Value, System.Reflection.Missing.Value, System.Reflection.Missing.Value, true);
                 else
@@ -397,7 +398,7 @@ namespace OlapPivotTableExtensions
                     Office.CommandBarPopup popup = (Office.CommandBarPopup)Application.CommandBars.FindControl(Office.MsoControlType.msoControlPopup, 31595, missing, missing);
                     popupAdditionalActionsIndex = popup.Index - 2; //not sure why -2 works
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
                 //add this button before the Additional Actions button
                 cmdShowPropertyAsCaptionMenuItem = (Office.CommandBarPopup)ptcon.Controls.Add(Office.MsoControlType.msoControlPopup, System.Reflection.Missing.Value, System.Reflection.Missing.Value, popupAdditionalActionsIndex, true);
@@ -420,7 +421,7 @@ namespace OlapPivotTableExtensions
         {
             try
             {
-                if (Ctrl.Tag != cmdChooseFieldsMenuItem.Tag || Ctrl.Caption != cmdChooseFieldsMenuItem.Caption || Ctrl.FaceId != cmdChooseFieldsMenuItem.FaceId)
+                if (!IsOurButton(Ctrl, cmdChooseFieldsMenuItem))
                     return;
 
                 Excel.CubeField cf = Application.ActiveCell.PivotCell.PivotField.CubeField;
@@ -440,7 +441,7 @@ namespace OlapPivotTableExtensions
         {
             try
             {
-                if (Ctrl.Tag != cmdClearPivotTableCacheMenuItem.Tag || Ctrl.Caption != cmdClearPivotTableCacheMenuItem.Caption || Ctrl.FaceId != cmdClearPivotTableCacheMenuItem.FaceId)
+                if (!IsOurButton(Ctrl, cmdClearPivotTableCacheMenuItem))
                     return;
             }
             catch (Exception ex)
@@ -598,7 +599,7 @@ namespace OlapPivotTableExtensions
                 {
                     sCubeInConnectionString = Convert.ToString(connADO.Properties["Cube"].Value);
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
                 if (!string.IsNullOrEmpty(sCubeInConnectionString))
                 {
@@ -633,7 +634,7 @@ namespace OlapPivotTableExtensions
                         {
                             field.CreatePivotFields();
                         }
-                        catch { }
+                        catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
                         //accumulate the visible items from all levels in case some items from multiple levels are checked
                         foreach (Excel.PivotField pf in field.PivotFields)
@@ -656,7 +657,7 @@ namespace OlapPivotTableExtensions
                             {
                                 field.CreatePivotFields();
                             }
-                            catch { }
+                            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
                             try
                             {
@@ -675,7 +676,7 @@ namespace OlapPivotTableExtensions
                                     }
                                 }
                             }
-                            catch { } //if it fails, oh well... we'll only lose sorting
+                            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); } //if it fails, oh well... we'll only lose sorting
                         }
                     }
                 }
@@ -732,7 +733,7 @@ namespace OlapPivotTableExtensions
                             cache.WorkbookConnection.OLEDBConnection.AlwaysUseConnectionFile = bUseConnectionFile;
                         }
                     }
-                    catch { }
+                    catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
                 }
 
             }
@@ -743,19 +744,19 @@ namespace OlapPivotTableExtensions
                 {
                     sDebugObjectInfo += GetPropertiesFromObject(typeof(Excel.OLEDBConnection), Application.ActiveCell.PivotTable.PivotCache().WorkbookConnection.OLEDBConnection);
                 }
-                catch { }
+                catch (Exception debugEx1) { Connect.Log.Warn(debugEx1, "Ignored exception reading OLEDBConnection properties"); }
 
                 try
                 {
                     sDebugObjectInfo += GetPropertiesFromObject(typeof(Excel.PivotTable), Application.ActiveCell.PivotTable);
                 }
-                catch { }
+                catch (Exception debugEx2) { Connect.Log.Warn(debugEx2, "Ignored exception reading PivotTable properties"); }
 
                 try
                 {
                     sDebugObjectInfo += GetPropertiesFromObject(typeof(Excel.PivotCache), Application.ActiveCell.PivotTable.PivotCache());
                 }
-                catch { }
+                catch (Exception debugEx3) { Connect.Log.Warn(debugEx3, "Ignored exception reading PivotCache properties"); }
 
                 MessageBox.Show("Problem during Clear PivotTable Cache:\r\n" + ex.Message + "\r\n" + ex.StackTrace + "\r\n\r\nAt task: " + sErrorLocation + "\r\n" + sDebugObjectInfo, "OLAP PivotTable Extensions");
             }
@@ -777,10 +778,10 @@ namespace OlapPivotTableExtensions
                     {
                         sb.AppendFormat("{0}={1}", prop.Name, prop.GetValue(o, null)).AppendLine();
                     }
-                    catch { }
+                    catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
             return sb.ToString();
         }
 
@@ -1075,11 +1076,17 @@ namespace OlapPivotTableExtensions
             }
         }
 
+        private static bool IsOurButton(Microsoft.Office.Core.CommandBarButton Ctrl, Microsoft.Office.Core.CommandBarButton ours)
+        {
+            try { return Ctrl != null && ours != null && Ctrl.Tag == ours.Tag && Ctrl.Caption == ours.Caption && Ctrl.FaceId == ours.FaceId; }
+            catch (System.Runtime.InteropServices.COMException) { return false; }
+        }
+
         void cmdMenuItem_Click(Microsoft.Office.Core.CommandBarButton Ctrl, ref bool CancelDefault)
         {
             try
             {
-                if (Ctrl.Tag != cmdMenuItem.Tag || Ctrl.Caption != cmdMenuItem.Caption || Ctrl.FaceId != cmdMenuItem.FaceId)
+                if (!IsOurButton(Ctrl, cmdMenuItem))
                     return;
 
                 frm = new MainForm(Application);
@@ -1095,7 +1102,7 @@ namespace OlapPivotTableExtensions
         {
             try
             {
-                if (Ctrl.Tag != cmdSearchMenuItem.Tag || Ctrl.Caption != cmdSearchMenuItem.Caption || Ctrl.FaceId != cmdSearchMenuItem.FaceId)
+                if (!IsOurButton(Ctrl, cmdSearchMenuItem))
                     return;
 
                 frm = new MainForm(Application);
@@ -1116,7 +1123,7 @@ namespace OlapPivotTableExtensions
             System.Text.StringBuilder sMdxQuery = new System.Text.StringBuilder();
             try
             {
-                if (Ctrl.Tag != cmdErrorMenuItem.Tag || Ctrl.Caption != cmdErrorMenuItem.Caption || Ctrl.FaceId != cmdErrorMenuItem.FaceId)
+                if (!IsOurButton(Ctrl, cmdErrorMenuItem))
                     return;
 
                 frm = new MainForm(Application);
@@ -1169,7 +1176,7 @@ namespace OlapPivotTableExtensions
                         {
                             cf.CreatePivotFields();
                         }
-                        catch { }
+                        catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
                         if (dictFilters.ContainsKey(cf.Name))
                         {
@@ -1292,7 +1299,7 @@ namespace OlapPivotTableExtensions
                 {
                     if (frm != null) frm.connCube.Close();
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
                 MainForm.ResetCulture(Application);
             }
         }
@@ -1346,7 +1353,7 @@ namespace OlapPivotTableExtensions
 
             try
             {
-                if (Ctrl.Tag != cmdDisableAutoRefresh.Tag || Ctrl.Caption != cmdDisableAutoRefresh.Caption || Ctrl.FaceId != this.cmdDisableAutoRefresh.FaceId)
+                if (!IsOurButton(Ctrl, cmdDisableAutoRefresh))
                     return;
 
 #if VSTO40
@@ -1374,7 +1381,7 @@ namespace OlapPivotTableExtensions
                         PowerPivotLaunchedChecker newDomainInstance = (PowerPivotLaunchedChecker)handle.Unwrap();
                         bIsPowerPivotLoaded = newDomainInstance.IsPowerPivotLoaded;
                     }
-                    catch { }
+                    catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
                     if (bIsPowerPivotLoaded) break;
                 }
                 if (!bIsPowerPivotLoaded)
@@ -1441,7 +1448,7 @@ namespace OlapPivotTableExtensions
                         {
                             conn.OLEDBConnection.EnableRefresh = !bEnableRefresh; //this statement will fail for the ThisWorkbookDataModel connection but will succeed for DAX query tables... if we want to avoid this error in the future, we may have to check whether ModelConnection.CommandType = xlCmdCube (which means it's ThisWorkbookDataModel) or ModelConnection.CommandType = xlCmdDAX (or maybe xlCmdTable, too?) which means it's a DAX query table
                         }
-                        catch { }
+                        catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
                     }
                 }
 
@@ -1484,7 +1491,7 @@ namespace OlapPivotTableExtensions
         {
             try
             {
-                if (Ctrl.Tag != cmdFilterListMenuItem.Tag || Ctrl.Caption != cmdFilterListMenuItem.Caption || Ctrl.FaceId != cmdFilterListMenuItem.FaceId)
+                if (!IsOurButton(Ctrl, cmdFilterListMenuItem))
                     return;
 
                 frm = new MainForm(Application);
@@ -1534,7 +1541,7 @@ namespace OlapPivotTableExtensions
                                 }
                             }
                         }
-                        catch { }
+                        catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
                     }
                     if (btn.Tag == MENU_TAG)
                     {
@@ -1542,7 +1549,7 @@ namespace OlapPivotTableExtensions
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
 

@@ -28,7 +28,7 @@ namespace OlapPivotTableExtensions
                         break;
                     }
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception in PowerPivotLaunchedChecker"); }
             }
             IsPowerPivotLoaded = bIsPowerPivotLoaded;
         }

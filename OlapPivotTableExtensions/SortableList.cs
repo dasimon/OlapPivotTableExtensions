@@ -152,7 +152,7 @@ namespace OlapPivotTableExtensions
                         retValue = xValue.ToString().CompareTo(yValue.ToString());
                     }
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception in SortableList"); }
                 
                 if (direction == ListSortDirection.Ascending)
                     return retValue;

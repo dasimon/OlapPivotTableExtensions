@@ -8,3 +8,11 @@
 /OlapPivotTableExtensions/publish
 /OlapPivotTableExtensions2016Setup/OlapPivotTableExtensions2016Setup/Express
 /packages
+
+# Build and upgrade logs
+UpgradeLog*.htm
+build_output.log
+
+# Local dev tooling config
+CLAUDE.md
+.vscode/

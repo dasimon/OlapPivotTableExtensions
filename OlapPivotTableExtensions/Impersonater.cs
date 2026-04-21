@@ -138,8 +138,10 @@ namespace OlapPivotTableExtensions
                     {
                         if (DuplicateToken(token, 2, ref tokenDuplicate) != 0)
                         {
-                            tempWindowsIdentity = new WindowsIdentity(tokenDuplicate);
-                            impersonationContext = tempWindowsIdentity.Impersonate();
+                            using (tempWindowsIdentity = new WindowsIdentity(tokenDuplicate))
+                            {
+                                impersonationContext = tempWindowsIdentity.Impersonate();
+                            }
                         }
                         else
                         {

@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Copyright ©2008; Microsoft Corporation. All rights reserved.
+ *  Copyright ï¿½2008; Microsoft Corporation. All rights reserved.
  *  Written by Microsoft Office Developer Support
  * 
  *  This code is provided as a sample. It is not a formal
@@ -282,7 +282,7 @@ namespace OlapPivotTableExtensions
 			{
 				Marshal.ReleaseComObject(o);
 			}
-			catch{}
+			catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception in xlEvents"); }
 			finally
 			{
 				o = null;
@@ -328,7 +328,7 @@ namespace OlapPivotTableExtensions
 					return true;
 				}
 			}
-			catch{}
+			catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception in xlEvents"); }
 			return false;
 		}
 	

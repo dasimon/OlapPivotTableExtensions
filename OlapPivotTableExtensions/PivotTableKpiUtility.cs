@@ -82,7 +82,7 @@ namespace OlapPivotTableExtensions
                     {
                         iconSet.ScopeType = Microsoft.Office.Interop.Excel.XlPivotConditionScope.xlDataFieldScope;
                     }
-                    catch { }
+                    catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception in PivotTableKpiUtility"); }
                     iconSet.ShowIconOnly = true;
                     iconSet.ReverseOrder = def.Reverse;
 

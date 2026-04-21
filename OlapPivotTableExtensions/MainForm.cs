@@ -34,8 +34,6 @@ namespace OlapPivotTableExtensions
 
         private int _LibraryComboDividerItemIndex = int.MaxValue;
 
-        private BackgroundWorker workerFormatMDX;
-
         private DataGridViewCheckBoxColumnHeaderCell colHeaderSearchCheckAll;
         private bool _SearchLookInShowAllHierarchies = false;
         private bool SearchWasCancelled = false;
@@ -72,7 +70,7 @@ namespace OlapPivotTableExtensions
                     System.Globalization.CultureInfo nciInstall = new System.Globalization.CultureInfo(app.LanguageSettings.get_LanguageID(Microsoft.Office.Core.MsoAppLanguageID.msoLanguageIDInstall));
                     sLanguage += "\r\nExcel Install Language: " + nciInstall.EnglishName;
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
                 lblExcelUILanguage.Text = sLanguage;
 
@@ -274,7 +272,8 @@ namespace OlapPivotTableExtensions
             }
         }
 
-        private static Dictionary<int, int> _dictSetCultureDepth = new Dictionary<int, int>();
+        private static System.Collections.Concurrent.ConcurrentDictionary<int, int> _dictSetCultureDepth
+            = new System.Collections.Concurrent.ConcurrentDictionary<int, int>();
 
         //fix for the "old format or invalid type library" error on non-english locales
         public static void SetCulture(Excel.Application app)
@@ -287,11 +286,8 @@ namespace OlapPivotTableExtensions
 
             System.Threading.Thread.CurrentThread.CurrentCulture = nci;
 
-            //cache the set culture depth
-            if (_dictSetCultureDepth.ContainsKey(System.Threading.Thread.CurrentThread.ManagedThreadId))
-                _dictSetCultureDepth[System.Threading.Thread.CurrentThread.ManagedThreadId]++;
-            else
-                _dictSetCultureDepth.Add(System.Threading.Thread.CurrentThread.ManagedThreadId, 1);
+            int threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            _dictSetCultureDepth.AddOrUpdate(threadId, 1, (id, old) => old + 1);
         }
 
         //fix for the LocaleIdentifier error on drillthrough
@@ -299,17 +295,19 @@ namespace OlapPivotTableExtensions
         {
             if (!_ShouldRunSetCulture) return;
 
-            if (!_dictSetCultureDepth.ContainsKey(System.Threading.Thread.CurrentThread.ManagedThreadId)) return;
+            int threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            int depth;
+            if (!_dictSetCultureDepth.TryGetValue(threadId, out depth)) return;
 
             //if two SetCulture calls are made before the first ResetCulture call is made, we should skip it until we get to the final ResetCulture call, otherwise it's reset to prematurely
-            if (_dictSetCultureDepth[System.Threading.Thread.CurrentThread.ManagedThreadId] <= 1)
+            if (depth <= 1)
             {
                 System.Threading.Thread.CurrentThread.CurrentCulture = Connect.OriginalCultureInfo;
             }
 
-            if (_dictSetCultureDepth[System.Threading.Thread.CurrentThread.ManagedThreadId] > 0) //ResetCulture should never be called when this = 0, but this is just to make sure
+            if (depth > 0) //ResetCulture should never be called when this = 0, but this is just to make sure
             {
-                _dictSetCultureDepth[System.Threading.Thread.CurrentThread.ManagedThreadId]--;
+                _dictSetCultureDepth.TryUpdate(threadId, depth - 1, depth);
             }
         }
 
@@ -332,10 +330,14 @@ namespace OlapPivotTableExtensions
 
                 if (Connect.FormatMdx)
                 {
-                    InitiateFormatMDX(sMdxQuery.ToString());
+                    richTextBoxMDX.Text = MdxFormatter.Format(richTextBoxMDX.Text);
+                    MdxFormatter.ApplySyntaxHighlighting(richTextBoxMDX);
+                    richTextBoxMDX.SelectionStart = 0;
+                    richTextBoxMDX.SelectionLength = 0;
+                    richTextBoxMDX.ScrollToCaret();
                 }
 
-                tooltip.SetToolTip(chkFormatMDX, "Checking this box will send your MDX query over the internet to this web service:\r\nhttp://formatmdx.azurewebsites.net/formatter.asmx");
+                tooltip.SetToolTip(chkFormatMDX, "Format the MDX query with proper indentation and syntax highlighting (local, no internet required)");
             }
             finally
             {
@@ -510,7 +512,7 @@ namespace OlapPivotTableExtensions
                     }
                 }
             }
-            catch { }
+            catch (Exception oledbEx) { Connect.Log.Warn(oledbEx, "Ignored exception reading OLEDBErrors"); }
             if (sErrors.Length > 0) sErrors += "\r\n";
             sErrors += ex.Message;
             if (includeStackTrace) sErrors += "\r\n" + ex.StackTrace;
@@ -829,7 +831,7 @@ namespace OlapPivotTableExtensions
                                 }
                                 else
                                 {
-                                    throw ex;
+                                    throw;
                                 }
                             }
                         }
@@ -1055,7 +1057,7 @@ namespace OlapPivotTableExtensions
             catch (Exception ex)
             {
                 MessageBox.Show(sStage + ex.Message + "\r\n" + ex.StackTrace, "OLAP PivotTable Extensions");
-                throw ex;
+                throw;
             }
         }
 
@@ -1495,7 +1497,7 @@ namespace OlapPivotTableExtensions
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         private delegate void searcher_ProgressChanged_Delegate(object sender, ProgressChangedEventArgs e);
@@ -1645,7 +1647,7 @@ namespace OlapPivotTableExtensions
                     this.AcceptButton = null;
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         private void txtSearch_Leave(object sender, EventArgs e)
@@ -1654,7 +1656,7 @@ namespace OlapPivotTableExtensions
             {
                 this.AcceptButton = null;
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         private void btnSearchAdd_Click(object sender, EventArgs e)
@@ -1837,7 +1839,7 @@ namespace OlapPivotTableExtensions
                     {
                         field.CreatePivotFields(); //Excel apparently doesn't always have the levels loaded, so this loads them
                     }
-                    catch { } 
+                    catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); } 
                     
                     if (field.Orientation == Excel.XlPivotFieldOrientation.xlHidden)
                     {
@@ -2047,7 +2049,7 @@ namespace OlapPivotTableExtensions
                     //    }
                     //}
                 }
-                catch { } //not sure why it failed... oh well
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); } //not sure why it failed... oh well
             }
 
             //now expand all parents to get to this
@@ -2062,7 +2064,7 @@ namespace OlapPivotTableExtensions
                         {
                             pivotItem.DrilledDown = true;
                         }
-                        catch { }
+                        catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
                     }
                 }
             }
@@ -2079,11 +2081,11 @@ namespace OlapPivotTableExtensions
                     if (connCube != null && connCube.State != ConnectionState.Closed)
                         connCube.Close();
                 }
-                catch { }
+                catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
                 base.OnClosed(e);
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         private void btnCancelSearch_Click(object sender, EventArgs e)
@@ -2161,7 +2163,7 @@ namespace OlapPivotTableExtensions
             {
                 chkMemberProperties.Checked = (cmbLookIn.SelectedIndex == 0);
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
             try
             {
                 if (cmbLookIn.SelectedIndex == 0)
@@ -2173,7 +2175,7 @@ namespace OlapPivotTableExtensions
                     Connect.SearchMeasuresOnlyDefault = true;
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
             try
             {
                 if (Convert.ToString(cmbLookIn.SelectedItem) == LOOK_IN_SHOW_ALL_HIERARCHIES)
@@ -2189,7 +2191,7 @@ namespace OlapPivotTableExtensions
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         private void MainForm_Activated(object sender, EventArgs e)
@@ -2214,7 +2216,7 @@ namespace OlapPivotTableExtensions
                     comboCalcName.Focus();
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         //change the cursor for the header cells which can be sorted
@@ -2227,7 +2229,7 @@ namespace OlapPivotTableExtensions
                     dataGridSearchResults.Cursor = Cursors.Hand;
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         private void dataGridSearchResults_CellMouseLeave(object sender, DataGridViewCellEventArgs e)
@@ -2236,7 +2238,7 @@ namespace OlapPivotTableExtensions
             {
                 dataGridSearchResults.Cursor = Cursors.Default;
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         private void btnFilterList_Click(object sender, EventArgs e)
@@ -2286,6 +2288,7 @@ namespace OlapPivotTableExtensions
         void workerFilterList_DoWork(object sender, DoWorkEventArgs e)
         {
             List<string> listMembersNotFound = new List<string>();
+            BackgroundWorker worker = (BackgroundWorker)sender;
 
             try
             {
@@ -2295,7 +2298,7 @@ namespace OlapPivotTableExtensions
 
                 ConnectAdomdClientCube();
 
-                if (e.Cancel) return;
+                if (worker.CancellationPending) { e.Cancel = true; return; }
 
                 FilterListWorkerArgs args = (FilterListWorkerArgs)e.Argument;
 
@@ -2312,7 +2315,7 @@ namespace OlapPivotTableExtensions
                 int iNumLinesFinished = 0;
                 foreach (string sLine in args.Lines)
                 {
-                    if (e.Cancel) return;
+                    if (worker.CancellationPending) { e.Cancel = true; return; }
                     if (!string.IsNullOrEmpty(sLine.Trim()))
                     {
 
@@ -2366,7 +2369,8 @@ namespace OlapPivotTableExtensions
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + "\r\n" + ex.StackTrace);
+                string msg = ex.Message;
+                this.Invoke((Action)(() => MessageBox.Show(msg, "OLAP PivotTable Extensions")));
 
                 SetFilterListProgress(0, false, listMembersNotFound.ToArray(), true);
             }
@@ -2386,7 +2390,7 @@ namespace OlapPivotTableExtensions
                     workerFilterList.CancelAsync();
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         private delegate void SetFilterListProgress_Delegate(int iProgress, bool bVisible, string[] arrMembersNotFound, bool bCloseIfSuccessful);
@@ -2491,6 +2495,7 @@ namespace OlapPivotTableExtensions
         void workerFilterList_ShowCurrentFilters_DoWork(object sender, DoWorkEventArgs e)
         {
             List<string> listMembersNotFound = new List<string>();
+            BackgroundWorker worker = (BackgroundWorker)sender;
 
             try
             {
@@ -2500,7 +2505,7 @@ namespace OlapPivotTableExtensions
 
                 ConnectAdomdClientCube();
 
-                if (e.Cancel) return;
+                if (worker.CancellationPending) { e.Cancel = true; return; }
 
                 FilterListWorkerArgs args = (FilterListWorkerArgs)e.Argument;
 
@@ -2512,7 +2517,7 @@ namespace OlapPivotTableExtensions
                 int iNumLinesFinished = 0;
                 foreach (string sLine in args.Lines)
                 {
-                    if (e.Cancel) return;
+                    if (worker.CancellationPending) { e.Cancel = true; return; }
                     if (!string.IsNullOrEmpty(sLine.Trim()))
                     {
 
@@ -2541,7 +2546,8 @@ namespace OlapPivotTableExtensions
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + "\r\n" + ex.StackTrace);
+                string msg = ex.Message;
+                this.Invoke((Action)(() => MessageBox.Show(msg, "OLAP PivotTable Extensions")));
 
                 SetFilterListProgress(0, false, listMembersNotFound.ToArray(), false);
             }
@@ -2565,41 +2571,6 @@ namespace OlapPivotTableExtensions
             }
         }
 
-        private void InitiateFormatMDX(string MDX)
-        {
-            workerFormatMDX = new BackgroundWorker();
-            workerFormatMDX.DoWork += new DoWorkEventHandler(workerFormatMDX_DoWork);
-            workerFormatMDX.RunWorkerAsync(MDX);
-
-            if (!lblFormattingMdxQuery.Visible)
-                richTextBoxMDX.Height -= (lblFormattingMdxQuery.Height + 5);
-            lblFormattingMdxQuery.ForeColor = System.Drawing.Color.Black;
-            lblFormattingMdxQuery.Text = "Formatting MDX query in progress...";
-            tooltip.SetToolTip(lblFormattingMdxQuery, "Calling web service...");
-            lblFormattingMdxQuery.Visible = true;
-        }
-
-        void workerFormatMDX_DoWork(object sender, DoWorkEventArgs e)
-        {
-            try
-            {
-                com.msftlabs.formatmdx.Formatter formatter = new com.msftlabs.formatmdx.Formatter();
-                com.msftlabs.formatmdx.Settings settings = new com.msftlabs.formatmdx.Settings();
-                settings.AdjustCase = false;
-                settings.CommaPlacement = com.msftlabs.formatmdx.CommaPlacementEnum.BegginingOfLine;
-                settings.OpenBraceAfterFunctionOrSubselectOnNewLine = false;
-                settings.SpacesPerIdent = 1;
-                settings.TabAsIdent = false;
-                formatter.Proxy = System.Net.WebRequest.GetSystemWebProxy(); //use current IE proxy settings
-                string sMdxRtf = formatter.FormatAsRtfWithSettings(e.Argument.ToString(), settings);
-                SetFormattedMDX(sMdxRtf, null);
-            }
-            catch (Exception ex)
-            {
-                SetFormattedMDX(null, ex);
-            }
-        }
-
         private void chkFormatMDX_CheckedChanged(object sender, EventArgs e)
         {
             try
@@ -2612,51 +2583,16 @@ namespace OlapPivotTableExtensions
                         if (string.IsNullOrEmpty(richTextBoxMDX.Text))
                             tabControl_SelectedIndexChanged(null, null);
                         else
-                            InitiateFormatMDX(richTextBoxMDX.Text);
+                        {
+                            richTextBoxMDX.Text = MdxFormatter.Format(richTextBoxMDX.Text);
+                            MdxFormatter.ApplySyntaxHighlighting(richTextBoxMDX);
+                        }
                     }
                 }
             }
             catch (Exception exInner)
             {
-                MessageBox.Show(exInner.Message + "\r\n" + exInner.StackTrace);
-            }
-        }
-
-        private delegate void SetFormattedMDX_Delegate(string MDX, Exception ex);
-        private void SetFormattedMDX(string MDX, Exception ex)
-        {
-            try
-            {
-                if (richTextBoxMDX.InvokeRequired)
-                {
-                    //avoid the "cross-thread operation not valid" error message
-                    richTextBoxMDX.Invoke(new SetFormattedMDX_Delegate(SetFormattedMDX), new object[] { MDX, ex });
-                }
-                else
-                {
-                    if (ex == null)
-                    {
-                        richTextBoxMDX.Rtf = MDX;
-                        richTextBoxMDX.SelectionStart = 0;
-                        richTextBoxMDX.SelectionLength = richTextBoxMDX.Text.Length;
-                        richTextBoxMDX.Focus();
-                        richTextBoxMDX.ScrollToCaret();
-
-                        lblFormattingMdxQuery.Visible = false;
-                        richTextBoxMDX.Height += lblFormattingMdxQuery.Height + 5;
-                    }
-                    else
-                    {
-                        lblFormattingMdxQuery.ForeColor = System.Drawing.Color.Red;
-                        lblFormattingMdxQuery.Text = "An error occurred formatting MDX query. Mouse over to see error.";
-                        com.msftlabs.formatmdx.Formatter formatter = new com.msftlabs.formatmdx.Formatter();
-                        tooltip.SetToolTip(lblFormattingMdxQuery, "Problem formatting MDX using the " + formatter.Url + " web service. Error was:\r\n\r\n" + ex.Message + "\r\n" + ex.StackTrace);
-                    }
-                }
-            }
-            catch (Exception exInner)
-            {
-                MessageBox.Show(exInner.Message + "\r\n" + exInner.StackTrace);
+                MessageBox.Show(exInner.Message + "\r\n" + exInner.StackTrace, "OLAP PivotTable Extensions");
             }
         }
 
@@ -2730,7 +2666,7 @@ namespace OlapPivotTableExtensions
                     e.Handled = true;
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
     }

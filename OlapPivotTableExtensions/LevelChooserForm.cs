@@ -33,10 +33,12 @@ namespace OlapPivotTableExtensions
         private class LevelContainer
         {
             private string _Caption; //cache this
+            public bool InitialHidden; //cache this — reading PivotField.Hidden after modifying another field can throw 0x800A01A8
             public LevelContainer(Excel.PivotField pf)
             {
                 PivotField = pf;
                 _Caption = pf.Caption;
+                InitialHidden = pf.Hidden;
             }
             public Excel.PivotField PivotField;
             public override string ToString()
@@ -65,7 +67,7 @@ namespace OlapPivotTableExtensions
                         lc.PivotField.Hidden = bHidden;
                     }
                     if (!bFoundCheckedLevel
-                        && !lc.PivotField.Hidden
+                        && !lc.InitialHidden
                         && i + 1 < chkLevels.Items.Count) //don't drilldown the last level
                     {
                         lc.PivotField.DrilledDown = true; //drill down any hidden levels above the first visible level

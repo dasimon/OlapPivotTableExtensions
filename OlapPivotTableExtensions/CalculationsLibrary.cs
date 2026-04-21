@@ -29,6 +29,9 @@ namespace OlapPivotTableExtensions
         /// </summary>
         public void Load()
         {
+            if (!System.IO.File.Exists(LibraryPath))
+                return;
+
             try
             {
                 XmlSerializer serializer = new XmlSerializer(typeof(CalculationsLibrary), null, new Type[] { typeof(Calculation) }, null, null);
@@ -39,8 +42,8 @@ namespace OlapPivotTableExtensions
             }
             catch (Exception ex)
             {
-                string s = ex.Message;
-                s = s + "";
+                System.Diagnostics.Trace.TraceError("CalculationsLibrary.Load error: {0}", ex);
+                System.Windows.Forms.MessageBox.Show("Problem loading the calculations library:\r\n" + ex.Message, "OLAP PivotTable Extensions");
             }
         }
 

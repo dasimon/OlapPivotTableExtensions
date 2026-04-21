@@ -250,7 +250,7 @@ namespace OlapPivotTableExtensions
                     if (_thread.CancellationPending) return;
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
             _listMatches = new SortableList<CubeSearchMatch>();
 
@@ -269,7 +269,7 @@ namespace OlapPivotTableExtensions
             {
                 _thread.CancelAsync();
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
 
             try
             {
@@ -288,7 +288,7 @@ namespace OlapPivotTableExtensions
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { Connect.Log.Warn(ex, "Ignored exception"); }
         }
 
         public string Error
@@ -1357,7 +1357,7 @@ namespace OlapPivotTableExtensions
                     && this.Type == other.Type
                     && this.Folder == other.Folder
                     && this.Description == other.Description
-                    && this.UniqueName == this.UniqueName)
+                    && this.UniqueName == other.UniqueName)
                     return true;
                 else
                     return false;
@@ -1373,7 +1373,19 @@ namespace OlapPivotTableExtensions
                     return false;
                 else
                     return Equals(other);
-            }   
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = 17;
+                    hash = hash * 23 + (Name ?? "").GetHashCode();
+                    hash = hash * 23 + Type.GetHashCode();
+                    hash = hash * 23 + (UniqueName ?? "").GetHashCode();
+                    return hash;
+                }
+            }
 
             public bool Checked
             {
