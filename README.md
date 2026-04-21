@@ -5,7 +5,7 @@
 
 A C# Excel VSTO add-in (.NET 4.8) that extends PivotTables connected to OLAP/tabular sources: SQL Server Analysis Services, Azure Analysis Services, Power BI, and Power Pivot.
 
-**Current version: 0.9.7**
+**Current version: 0.9.8**
 
 ## What this fork fixes / adds
 
