@@ -1184,12 +1184,12 @@ namespace OlapPivotTableExtensions
 
         private void linkCodeplex_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            System.Diagnostics.Process.Start("https://github.com/dasimon/OlapPivotTableExtensions");
+            System.Diagnostics.Process.Start(UrlConstants.ProjectHome);
         }
 
         private void linkHelp_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            System.Diagnostics.Process.Start("https://github.com/dasimon/OlapPivotTableExtensions/wiki/Calculations-Help");
+            System.Diagnostics.Process.Start(UrlConstants.CalculationsHelp);
         }
 
         private void linkUpgradePivotTable_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -1199,7 +1199,7 @@ namespace OlapPivotTableExtensions
 
         private void linkUnsupportedLanguageConfiguration_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            System.Diagnostics.Process.Start("https://github.com/dasimon/OlapPivotTableExtensions/wiki/Unsupported-Language-Configuration");
+            System.Diagnostics.Process.Start(UrlConstants.UnsupportedLanguageConfig);
         }
 
         private void radioExport_CheckedChanged(object sender, EventArgs e)
